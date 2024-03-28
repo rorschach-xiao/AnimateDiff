@@ -38,7 +38,7 @@ def main(args):
 	
 	time_str = datetime.datetime.now().strftime("%Y-%m-%d")
 	
-	savedir = f"sample/{Path(args.exp_config).stem}_{args.H}_{args.W}-{time_str}"
+	savedir = f"{args.output_dir}/{Path(args.exp_config).stem}_{args.H}_{args.W}-{time_str}"
 	os.makedirs(savedir, exist_ok=True)
 	
 	# Load Config
@@ -131,6 +131,7 @@ if __name__ == "__main__":
 	parser.add_argument("--pretrained_model_path", type=str, default="models/StableDiffusion/stable-diffusion-xl-base-1.0",)
 	parser.add_argument("--base_config",	  type=str, default="configs/inference/inference.yaml")    
 	parser.add_argument("--exp_config",		 type=str, required=True)
+	parser.add_argument("--output_dir",		 type=str, default="")
 
 	parser.add_argument("--L", type=int, default=16 )
 	parser.add_argument("--W", type=int, default=1024)

@@ -141,21 +141,46 @@ def load_weights(pipeline, motion_module_path, ckpt_path, lora_path, lora_alpha)
         print(f'Loading motion module from {motion_module_path}...')
 
     # Load LoRA
+    # if lora_path != "":
+    #     lora_state_dict = {}
+    #     with safe_open(lora_path, framework='pt', device='cpu') as f:
+    #         for k in f.keys():
+    #             lora_state_dict[k] = f.get_tensor(k)
+    #     for k, v in lora_state_dict.items():
+    #         if 'lora.up' in k:
+			
+    #             down_key = k.replace('lora.up', 'lora.down')
+    #             if 'to_out' not in k:
+    #                 original_key = k.replace('processor.', '').replace('_lora.up', '')
+    #             else:
+    #                 original_key = k.replace('processor.', '').replace('_lora.up', '.0')
+    #             pipeline.unet.state_dict()[original_key] += lora_alpha * torch.mm(v, lora_state_dict[down_key])
+    #     print(f'Loading lora model from {lora_path}')
     if lora_path != "":
         lora_state_dict = {}
         with safe_open(lora_path, framework='pt', device='cpu') as f:
             for k in f.keys():
                 lora_state_dict[k] = f.get_tensor(k)
+        total_weights = 0
+        used_weights = 0
         for k, v in lora_state_dict.items():
             if 'lora.up' in k:
-			
-                down_key = k.replace('lora.up', 'lora.down')
-                if 'to_out' not in k:
-                    original_key = k.replace('processor.', '').replace('_lora.up', '')
-                else:
-                    original_key = k.replace('processor.', '').replace('_lora.up', '.0')
-                pipeline.unet.state_dict()[original_key] += lora_alpha * torch.mm(v, lora_state_dict[down_key])
+                total_weights += 1
+                k = k.replace('unet.', '')
+                down_key = 'unet.' + k.replace("lora.up", "lora.down")
+                original_key = k.replace('.lora.up', '')
+                if original_key not in pipeline.unet.state_dict():
+                    print(original_key)
+                    continue
+                
+                used_weights += 1
+                up_weight = v.to(pipeline.unet.state_dict()[original_key].device)
+                down_weight = lora_state_dict[down_key].to(pipeline.unet.state_dict()[original_key].device)
+                
+                pipeline.unet.state_dict()[original_key] += lora_alpha * torch.mm(up_weight, down_weight)
         print(f'Loading lora model from {lora_path}')
+        print(f'##### Total weights: {total_weights}')
+        print(f'##### Used weights: {used_weights}')
 
     return pipeline
 
