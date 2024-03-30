@@ -55,7 +55,8 @@ def convert_lora(pipeline, state_dict, LORA_PREFIX_UNET="lora_unet", LORA_PREFIX
     # state_dict = load_file(checkpoint_path)
 
     visited = []
-
+    total_weights = 0
+    used_weights = 0
     # directly update weight in diffusers model
     for key in state_dict:
         # it is suggested to print out the key, it usually will be something like below
@@ -65,35 +66,45 @@ def convert_lora(pipeline, state_dict, LORA_PREFIX_UNET="lora_unet", LORA_PREFIX
         if ".alpha" in key or key in visited:
             continue
 
-        if "text" in key:
-            layer_infos = key.split(".")[0].split(LORA_PREFIX_TEXT_ENCODER + "_")[-1].split("_")
-            curr_layer = pipeline.text_encoder
-        else:
-            layer_infos = key.split(".")[0].split(LORA_PREFIX_UNET + "_")[-1].split("_")
-            curr_layer = pipeline.unet
+        # if "text" in key:
+        #     layer_infos = key.split(".")[0].split(LORA_PREFIX_TEXT_ENCODER + "_")[-1].split("_")
+        #     curr_layer = pipeline.text_encoder
+        # else:
+        #     layer_infos = key.split(".")[0].split(LORA_PREFIX_UNET + "_")[-1].split("_")
+        #     curr_layer = pipeline.unet
 
-        # find the target layer
-        temp_name = layer_infos.pop(0)
-        while len(layer_infos) > -1:
-            try:
-                curr_layer = curr_layer.__getattr__(temp_name)
-                if len(layer_infos) > 0:
-                    temp_name = layer_infos.pop(0)
-                elif len(layer_infos) == 0:
-                    break
-            except Exception:
-                if len(temp_name) > 0:
-                    temp_name += "_" + layer_infos.pop(0)
-                else:
-                    temp_name = layer_infos.pop(0)
+        # # find the target layer
+        # temp_name = layer_infos.pop(0)
+        # while len(layer_infos) > -1:
+        #     try:
+        #         curr_layer = curr_layer.__getattr__(temp_name)
+        #         if len(layer_infos) > 0:
+        #             temp_name = layer_infos.pop(0)
+        #         elif len(layer_infos) == 0:
+        #             break
+        #     except Exception:
+        #         if len(temp_name) > 0:
+        #             temp_name += "_" + layer_infos.pop(0)
+        #         else:
+        #             temp_name = layer_infos.pop(0)
 
+        curr_model = pipeline.unet
+        total_weights += 1
+        original_key = key.replace('unet.', '').replace('.lora.up', '').replace('.lora.down', '')
+        if original_key not in curr_model.state_dict():
+            print(original_key)
+            continue
+        curr_layer = curr_model.state_dict()[original_key]
+    
         pair_keys = []
-        if "lora_down" in key:
-            pair_keys.append(key.replace("lora_down", "lora_up"))
+        if "lora.down" in key:
+            pair_keys.append(key.replace("lora.down", "lora.up"))
             pair_keys.append(key)
         else:
             pair_keys.append(key)
-            pair_keys.append(key.replace("lora_up", "lora_down"))
+            pair_keys.append(key.replace("lora.up", "lora.down"))
+        
+        used_weights += 2
 
         # update weight
         if len(state_dict[pair_keys[0]].shape) == 4:
@@ -108,6 +119,9 @@ def convert_lora(pipeline, state_dict, LORA_PREFIX_UNET="lora_unet", LORA_PREFIX
         # update visited list
         for item in pair_keys:
             visited.append(item)
+
+    print(f'##### Total weights: {total_weights}')
+    print(f'##### Used weights: {used_weights}')
 
     return pipeline
 
