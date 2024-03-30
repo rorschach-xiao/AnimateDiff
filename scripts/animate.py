@@ -184,7 +184,7 @@ if __name__ == "__main__":
     parser.add_argument("--pretrained-model-path", type=str, default="models/StableDiffusion/stable-diffusion-v1-5",)
     parser.add_argument("--inference-config",      type=str, default="configs/inference/inference-v1.yaml")    
     parser.add_argument("--config",                type=str, required=True)
-    parser.add_argument("--output-dir",            type=str, default="output")
+    parser.add_argument("--output_dir",            type=str, default="output")
     
     parser.add_argument("--L", type=int, default=16 )
     parser.add_argument("--W", type=int, default=512)
