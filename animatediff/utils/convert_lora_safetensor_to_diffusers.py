@@ -120,7 +120,7 @@ def convert_lora(pipeline, state_dict, LORA_PREFIX_UNET="lora_unet", LORA_PREFIX
         for item in pair_keys:
             visited.append(item)
 
-    print(f'##### Total weights: {total_weights}')
+    print(f'##### Total weights: {total_weights * 2}')
     print(f'##### Used weights: {used_weights}')
 
     return pipeline
